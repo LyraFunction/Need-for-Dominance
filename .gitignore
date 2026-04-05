@@ -48,3 +48,7 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 .DS_Store
+posters/PSYCposter.af
+posters/PSYCposter.af~lock~
+data_raw/NFC Study Data.csv
+data_raw/NFC Study 2 Data.csv
