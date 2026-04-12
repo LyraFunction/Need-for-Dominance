@@ -5,9 +5,9 @@
 ## Load libraries for project
 library(tidyverse)
 library(tidyplots)
-library(patchwork)
 library(poLCA)
 library(reshape2)
+library(gt)
 #libary(poLCAParallel)
 
 ## Load files
@@ -223,10 +223,12 @@ data1 <- data |>
 data2 <- data |>
   filter(Study == 2)
 rm(cols)
-
 ################################################################################
 ############################# Study 1 model ###################################
 ################################################################################
+
+set.seed(11)
+
 Study1AIC <- data.frame()
 Study1BIC <- data.frame()
 max_II <- -100000
@@ -248,11 +250,11 @@ for(i in 2:10){
 f <- cbind(REALnb,EVALnb,STAB1nb,
            REALgl,EVALgl,STAB1gl,
            REALbi,EVALbi,STAB1bi)~NFC_Total+SDO_Total + Age + Religiousness + Lib_Con
-m1c <- poLCA(f, data1, nclass=4, maxiter=5000,
+m1c <- poLCA(f, data1, nclass=5, maxiter=5000,
             tol=1e-5, na.rm=FALSE,
             nrep=10, verbose=TRUE, calc.se=TRUE)
 probs.start.new <-poLCA.reorder(m1c$probs.start,order(m1c$P,decreasing=TRUE))
-m1c <- poLCA(f, data1, nclass=4, maxiter=5000,
+m1c <- poLCA(f, data1, nclass=5, maxiter=5000,
              tol=1e-5, na.rm=FALSE,
              nrep=1, verbose=TRUE, calc.se=TRUE, probs.start = probs.start.new)
 
@@ -288,11 +290,12 @@ f <- cbind(REALtgw,EVALtgw,STAB1tgw,
 m2c <- poLCA(f, data2, nclass=5, maxiter=5000,
             tol=1e-5, na.rm=FALSE,
             nrep=10, verbose=TRUE, calc.se=TRUE)
-probs.start.new  <-poLCA.reorder(m2c$probs.start,order(m2c$P,decreasing=TRUE))
+probs.start.newT  <-poLCA.reorder(m2c$probs.start,order(m2c$P,decreasing = TRUE))
 m2c <- poLCA(f, data2, nclass=5, maxiter=5000,
              tol=1e-5, na.rm=FALSE,
-             nrep=1, verbose=TRUE, calc.se=TRUE, probs.start = probs.start.new)
-rm(f, i, max_II, min_bic, lc, m1, m2)
+             nrep=1, verbose=TRUE, calc.se=TRUE, probs.start = probs.start.newT)
+
+rm(f, i, max_II, min_bic, lc, m1, m2, probs.start.new)
 
 ################################################################################
 ############################## Data Visualization ##############################
@@ -506,6 +509,7 @@ STAB_Bisexual_Density <- data |>
 
 STAB_Trans_women_Density + STAB_Trans_men_Density + STAB_Nonbinary_Density + STAB_Gay_Lesbian_Density + STAB_Bisexual_Density + plot_layout(ncol = 5, nrow = 1)
 rm(STAB_Trans_women_Density,STAB_Trans_men_Density,STAB_Nonbinary_Density,STAB_Gay_Lesbian_Density,STAB_Bisexual_Density)
+rm(f, i, data, data1, data2)
 
 ################################################################################
 ################################## Fit Plots ###################################
@@ -537,12 +541,12 @@ rm(Study1AIC, Study1BIC, Study2AIC, Study2BIC, ClassComparison1, ClassComparison
 # Plots
 FitPlot <- FitComparison |>
   tidyplot(x = Classes, y = Value, color = Fit_Indicator) |>
-  add_data_points(size = 4) |>
-  add_line(linewidth = 1.5) |>
+  add_data_points(size = 6) |>
+  add_line(linewidth = 2) |>
   theme_minimal_xy() |>
   adjust_size(height = NA, width = NA) |>
   adjust_colors(colors_discrete_apple) |>
-  adjust_font(fontsize = 36, family = "Helvetica Neue", face = "plain") |>
+  adjust_font(fontsize = 72, family = "Helvetica Neue", face = "plain") |>
   adjust_title("AIC & BIC Fit by Study") |>
   adjust_x_axis_title("Class Count") |>
   adjust_legend_title("Fit Indicator") |>
@@ -555,25 +559,29 @@ rm(FitComparison, FitPlot)
 ################################### LCA Plots ################################## 
 ################################################################################
 
-poLCA.entropy(m1c)
-poLCA.entropy(m2c)
-
 m1probability <- melt(m1c$probs)
 m1probabilityplot <- m1probability %>%
   mutate(
-    L1 = factor(L1, levels = unique(L1), labels = c("Realness of Nonbinary Identity", "Evaluation of Nonbinary Identity", "Stability of Nonbinary Identity","Realness of Gay and Lesbian Identity","Evaluation of Gay and Lesbian Identity", "Stability of Gay and Lesbian Identity", "Realness of Bisexual Identity", "Evaluation of Bisexual Identity", "Stability of Bisexual Identity")),
+    L1 = factor(L1, levels = unique(L1), labels = c("Nonbinary Realness",
+                                                    "Nonbinary Evaluation",
+                                                    "Nonbinary Stability",
+                                                    "Gay and Lesbian Realness",
+                                                    "Gay and Lesbian Evaluation",
+                                                    "Gay and Lesbian Stability",
+                                                    "Bisexual Realness",
+                                                    "Bisexual Evaluation",
+                                                    "Bisexual Stability")),
     Var1 = factor(Var1),                    
     Var2 = factor(Var2)                      
   )
 Class1Plot <- m1probabilityplot |>
   tidyplot(x = Var2, y = value, color = Var1) |>
-  add_areastack_relative(alpha = .75) |>
+  add_areastack_relative(alpha = .75, linewidth = 2) |>
   theme_minimal_xy() |>
   adjust_size(height = NA, width = NA) |>
   adjust_colors(colors_discrete_apple) |>
-  adjust_font(fontsize = 72, family = "Helvetica Neue", face = "plain") |>
-  adjust_title("Study 1 Class Plot") |>
-  adjust_legend_title("Class") |>
+  adjust_font(fontsize = 80, family = "Helvetica Neue", face = "plain") |>
+  adjust_legend_title("Class: ") |>
   adjust_legend_position(position = "top") |>
   rename_x_axis_levels(new_names = c(
     "Pr(1)" = "1",
@@ -583,13 +591,14 @@ Class1Plot <- m1probabilityplot |>
     "Pr(5)" = "5",
     "Pr(6)" = "6",
     "Pr(7)" = "7")) |>
-  adjust_x_axis_title("Rating") |>
+  adjust_x_axis_title("Class Rating") |>
   adjust_y_axis_title("Rating Probability") |>
   rename_color_levels(new_names = c(
-    "class 1: " = "Class 1",
-    "class 2: " = "Class 2",
-    "class 3: " = "Class 3",
-    "class 4: " = "Class 4"
+    "class 1: " = "Class 1 ",
+    "class 2: " = "Class 2 ",
+    "class 3: " = "Class 3 ",
+    "class 4: " = "Class 4 ",
+    "class 5: " = "Class 5"
   )) |>
   split_plot(by = L1, axes = "all_x", axis.titles = "margins", scales = "fixed", ncol = 3, nrow = 3)
 
@@ -597,19 +606,32 @@ Class1Plot <- m1probabilityplot |>
 m2probability <- melt(m2c$probs)
 m2probability <- m2probability %>%
   mutate(
-    L1 = factor(L1, levels = unique(L1), labels = c("Realness of Transgender Identity (Women)", "Evaluation of Transgender Identity (Women)", "Stability of Transgender Identity (Women)","Realness of Transgender Identity (Men)", "Evaluation of Transgender Identity (Men)", "Stability of Transgender Identity (Men)","Realness of Nonbinary Identity", "Evaluation of Nonbinary Identity", "Stability of Nonbinary Identity","Realness of Gay and Lesbian Identity","Evaluation of Gay and Lesbian Identity", "Stability of Gay and Lesbian Identity", "Realness of Bisexual Identity", "Evaluation of Bisexual Identity", "Stability of Bisexual Identity")),
+    L1 = factor(L1, levels = unique(L1), labels = c("Trans Women Realness",
+                                                    "Trans Women Evaluation",
+                                                    "Trans Women Stability",
+                                                    "Trans Men Realness",
+                                                    "Trans Men Evaluation",
+                                                    "Trans Men Stability",
+                                                    "Nonbinary Realness",
+                                                    "Nonbinary Evaluation",
+                                                    "Nonbinary Stability",
+                                                    "Gay and Lesbian Realness",
+                                                    "Gay and Lesbian Evaluation",
+                                                    "Gay and Lesbian Stability",
+                                                    "Bisexual Realness",
+                                                    "Bisexual Evaluation",
+                                                    "Bisexual Stability")),
     Var1 = factor(Var1),                    
     Var2 = factor(Var2)                      
   )
 Class2Plot <- m2probability |>
   tidyplot(x = Var2, y = value, color = Var1) |>
-  add_areastack_relative(alpha = .75) |>
+  add_areastack_relative(alpha = .75, linewidth = 2, reverse = TRUE) |>
   theme_minimal_xy() |>
   adjust_size(height = NA, width = NA) |>
   adjust_colors(colors_discrete_apple) |>
-  adjust_font(fontsize = 72, family = "Helvetica Neue", face = "plain") |>
-  adjust_title("Study 2 Class Plot") |>
-  adjust_legend_title("Class") |>
+  adjust_font(fontsize = 80, family = "Helvetica Neue", face = "plain") |>
+  adjust_legend_title("Class: ") |>
   adjust_legend_position(position = "top") |>
   rename_x_axis_levels(new_names = c(
     "Pr(1)" = "1",
@@ -619,20 +641,157 @@ Class2Plot <- m2probability |>
     "Pr(5)" = "5",
     "Pr(6)" = "6",
     "Pr(7)" = "7")) |>
-  adjust_x_axis_title("Rating") |>
+  adjust_x_axis_title("Class Rating") |>
   adjust_y_axis_title("Rating Probability") |>
   rename_color_levels(new_names = c(
-    "class 1: " = "Class 1",
-    "class 2: " = "Class 2",
-    "class 3: " = "Class 3",
-    "class 4: " = "Class 4",
+    "class 1: " = "Class 1 ",
+    "class 2: " = "Class 2 ",
+    "class 3: " = "Class 3 ",
+    "class 4: " = "Class 4 ",
     "class 5: " = "Class 5"
   )) |>
   split_plot(by = L1, axes = "all_x", axis.titles = "margins", scales = "fixed", ncol = 3, nrow = 5)
 
+rm(Class1Plot, Class2Plot, m1probability, m2probability)
+
+################################################################################
+############################## Regression Tables ##############################
+################################################################################
+
+################################### Model 1 ####################################
+Model1Data <- data.frame(
+  Identifier = c("Class 2/1", "Intercept", "Need for Closure", "Social Dominance Orientation", "Age", "Religiosity", "Conservative Self Identification", " ",
+                 "Class 3/1", "Intercept", "Need for Closure", "Social Dominance Orientation", "Age", "Religiosity", "Conservative Self Identification", " ",
+                 "Class 4/1", "Intercept", "Need for Closure", "Social Dominance Orientation", "Age", "Religiosity", "Conservative Self Identification", " ",
+                 "Class 5/1", "Intercept", "Need for Closure", "Social Dominance Orientation", "Age", "Religiosity", "Conservative Self Identification"),
+  CoefficientCol = c("Coefficient", "-2.062", "0.130", "0.496", "0.011", "0.017", "-0.387", " ",
+                     "Coefficient", "-3.797", "0.129", "1.051", "-0.012", "0.243", "0.854", " ",
+                     "Coefficient", "-1.706", "0.112", "0.009", "0.013", "0.007", "0.701", " ",
+                     "Coefficient", "-11.609", "1.081", "1.210", "0.005", "0.463", "1.508"),
+  StdCol = c("Std. Error", "1.057", "0.178", "0.206", "0.011", "0.098", "0.635", " ",
+             "Std. Error", "1.264", "0.214", "0.199", "0.015", "0.107", "0.557", " ",
+             "Std. Error", "1.063", "0.189", "0.238", "0.014", "0.131", "0.617", " ",
+             "Std. Error", "2.565", "0.324", "0.390", "0.027", "0.191", "0.992"),
+  tCol = c("t value", "-1.950", "0.727", "2.407", "0.975", "0.178", "-0.609", " ",
+           "t value", "-3.005", "0.604", "5.294", "-0.770", "2.271", "1.533", " ",
+           "t value", "-1.605", "0.591", "0.037", "0.972", "0.058", "1.136", " ",
+           "t value", "-4.525", "3.340", "3.107", "0.169", "2.422", "1.520"),
+  pCol = c("p", ".053", ".468", ".017", ".331", ".859", ".543", " ",
+           "p", ".003", ".546", "< .001", ".442", ".024", ".127", " ",
+           "p", ".110", ".555", ".970", ".332", ".954", ".257", " ",
+           "p", "< .001", ".001", ".002", ".866", ".016", ".130")
+)
+
+Model1Table <- Model1Data |>
+  gt() |>
+  tab_options(column_labels.hidden = TRUE) |>
+  opt_table_font(font = "Helvetica Neue", color = "black", size = 21) |>
+  tab_style(
+    style = cell_text(style = "normal", align = "center"),
+    locations = cells_body(columns = c("CoefficientCol", "StdCol", "tCol", "pCol"))) |>
+  tab_style(
+    style = cell_text(style = "italic", align = "center"),
+    locations = cells_body(columns = pCol, rows = pCol == "p")) |>
+  tab_style(
+    style = cell_text(style = "italic", align = "center"),
+    locations = cells_body(columns = tCol, rows = tCol == "t value")) |>
+  tab_style(
+    style = cell_text(style = "italic", align = "center"),
+    locations = cells_body(columns = StdCol, rows = StdCol == "Std. Error")) |>
+  tab_style(
+    style = cell_text(style = "italic", align = "center"),
+    locations = cells_body(columns = CoefficientCol, rows = CoefficientCol == "Coefficient")) |>
+  tab_style(
+    style = cell_borders(
+      sides = c("all"),
+      weight = px(0),
+      style = "solid"
+    ),
+    locations = cells_body()
+    ) |>
+  tab_style(
+    style = cell_borders(
+      sides = c("bottom"),
+      color = "black",
+      weight = px(4),
+      style = "solid"
+    ),
+    locations = cells_body(columns = everything(), rows = c(1, 7, 9, 15, 17, 23, 25, 31))
+  ) |>
+  cols_width(starts_with("Identifier") ~ px(350), everything() ~ px(115))
+
+################################### Model 2 ####################################
+Model2Data <- data.frame(
+  Identifier = c("Class 2/1", "Intercept", "Need for Closure", "Social Dominance Orientation", "Age", "Religiosity", "Conservative Self Identification", " ",
+                 "Class 3/1", "Intercept", "Need for Closure", "Social Dominance Orientation", "Age", "Religiosity", "Conservative Self Identification", " ",
+                 "Class 4/1", "Intercept", "Need for Closure", "Social Dominance Orientation", "Age", "Religiosity", "Conservative Self Identification", " ",
+                 "Class 5/1", "Intercept", "Need for Closure", "Social Dominance Orientation", "Age", "Religiosity", "Conservative Self Identification"),
+  CoefficientCol = c("Coefficient", "6.184", "-0.171", "-1.209", "-0.024", "-0.388", "-2.671", " ",
+                     "Coefficient", "3.293", "-0.219", "-0.327", "-0.004", "-0.177", "-1.525 ", " ",
+                     "Coefficient", "4.249", "-0.241", "-0.769", "0.002", "-0.242", "-1.721", " ",
+                     "Coefficient", "6.498", "-0.519", "-1.205", "0.001", "-0.433", "-1.525"),
+  StdCol = c("Std. Error", "1.995", "0.293", "0.313", "0.021", "0.160", "0.906", " ",
+             "Std. Error", "2.048", "0.326", "0.264", "0.019", "0.153", "0.670", " ",
+             "Std. Error", "1.965", "0.314", "0.278", "0.019", "0.147", "0.642", " ",
+             "Std. Error", "2.287", "0.308", "0.457", "0.025", "0.236", "0.899"),
+  tCol = c("t value", "3.100", "-0.585", "-3.859", "-1.146", "-2.425", "-2.947", " ",
+           "t value", "1.608", "-0.672", "-1.239", "-0.193", "-1.153", "-2.276", " ",
+           "t value", "2.163", "-0.767", "-2.766", "0.108", "-1.644", "-2.682", " ",
+           "t value", "2.841", "-1.687", "-2.634", "0.169", "0.035", "-1.836"),
+  pCol = c("p", ".003", ".561", "< .001", ".256", ".018", ".004", " ",
+           "p", ".113", ".504", ".220", ".848", ".253", ".026", " ",
+           "p", ".034", ".446", ".007", ".914", ".105", ".009", " ",
+           "p", ".006", ".096", ".010", ".972", ".071", ".094")
+)
+
+Model2Table <- Model2Data |>
+  gt() |>
+  tab_options(column_labels.hidden = TRUE) |>
+  opt_table_font(font = "Helvetica Neue", color = "black", size = 21) |>
+  tab_style(
+    style = cell_text(style = "normal", align = "center"),
+    locations = cells_body(columns = c("CoefficientCol", "StdCol", "tCol", "pCol"))) |>
+  tab_style(
+    style = cell_text(style = "italic", align = "center"),
+    locations = cells_body(columns = pCol, rows = pCol == "p")) |>
+  tab_style(
+    style = cell_text(style = "italic", align = "center"),
+    locations = cells_body(columns = tCol, rows = tCol == "t value")) |>
+  tab_style(
+    style = cell_text(style = "italic", align = "center"),
+    locations = cells_body(columns = StdCol, rows = StdCol == "Std. Error")) |>
+  tab_style(
+    style = cell_text(style = "italic", align = "center"),
+    locations = cells_body(columns = CoefficientCol, rows = CoefficientCol == "Coefficient")) |>
+  tab_style(
+    style = cell_borders(
+      sides = c("all"),
+      weight = px(0),
+      style = "solid"
+    ),
+    locations = cells_body()
+  ) |>
+  tab_style(
+    style = cell_borders(
+      sides = c("bottom"),
+      color = "black",
+      weight = px(4),
+      style = "solid"
+    ),
+    locations = cells_body(columns = everything(), rows = c(1, 7, 9, 15, 17, 23, 25, 31))
+  ) |>
+  cols_width(starts_with("Identifier") ~ px(350), everything() ~ px(115))
+
+##################################### Save ##################################### 
+Model1Table <- as_gtable(Model1Table)
+Model1Table <- as.ggplot(Model1Table)
+ggsave('Model1Table.png', Model1Table, width = 2550,height = 3000,units = "px")
+Model2Table <- as_gtable(Model2Table)
+Model2Table <- as.ggplot(Model2Table)
+ggsave('Model2Table.png', Model2Table, width = 2550,height = 3000,units = "px")
+
+rm(Model2Table, Model1Table, Model2Data, Model1Data)
+
 ################################################################################
 ################################ Remove Objects ################################
 ################################################################################
-
-rm(f, i, data, data1, data2)
-
