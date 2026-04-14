@@ -8,6 +8,5 @@ OSF Link to Original Study: https://osf.io/h5vpb/overview
 ## Repository Structure
 -   `scripts` contains the R code for cleaning, analyzing, and visualizing the data.
 -   `poster` contains the PDF of the finished poster.
--   `citations` will contain BibTex files for the project
--   `supplementals` will contain supplemental information such as rational for data decisions.
-## Replication Instructions
+-   `citations` contains a BibTex file of the citations used for the poster.
+-   `supplementals` contains (almost) all the graphs and charts used for the poster. The LCA analyses aren't included due to their resolution. 
